@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y & O STORE | GAMING OFFERS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <style>
+        :root { --neon: #26ff00; --bg: #020202; --card: #0a0a0a; --accent: #151515; }
+        body { background: var(--bg); color: white; font-family: 'Cairo', sans-serif; overflow-x: hidden; }
+        .font-gamer { font-family: 'Orbitron', sans-serif; }
+        
+        /* Navbar */
+        .glass-nav { background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); border-bottom: 2px solid var(--neon); box-shadow: 0 0 15px rgba(38,255,0,0.2); }
+        
+        /* Offers Card - صغرنا الحجم هنا */
+        .offer-card { 
+            background: var(--card); border: 1px solid #1a1b1e; border-radius: 15px; 
+            transition: 0.3s; overflow: hidden; position: relative; max-width: 280px; margin: auto;
+        }
+        .offer-card:hover { border-color: var(--neon); transform: translateY(-8px); box-shadow: 0 10px 30px rgba(38,255,0,0.15); }
+        
+        /* Neon Buttons */
+        .btn-neon { 
+            background: var(--neon); color: black; font-weight: 900; 
+            padding: 10px 20px; border-radius: 10px; transition: 0.3s;
+            box-shadow: 0 0 15px rgba(38,255,0,0.3);
+        }
+        .btn-neon:hover { box-shadow: 0 0 25px var(--neon); transform: scale(1.05); }
+
+        /* Admin Layout */
+        .admin-layout { display: none; min-height: 100vh; background: #000; padding: 20px; }
+        .stat-box { background: var(--accent); border: 1px solid #222; padding: 15px; border-radius: 15px; text-align: center; }
+
+        /* Status Badges */
+        .badge-pending { background: #facc15; color: black; font-size: 10px; padding: 2px 8px; border-radius: 5px; }
+        .badge-confirmed { background: var(--neon); color: black; font-size: 10px; padding: 2px 8px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="store-ui">
+        <nav class="glass-nav p-3 sticky top-0 z-50 flex justify-between items-center px-6">
+            <button onclick="adminLogin()" class="text-[8px] text-zinc-800 font-bold hover:text-white transition">STAFF_LOGIN</button>
+            <div class="flex flex-col items-center">
+                <img src="abc.jpg" alt="Logo" class="h-10 w-auto object-contain mb-1" onerror="this.src='https://via.placeholder.com/40x40?text=Y&O'">
+                <h1 class="font-gamer text-white text-[10px] tracking-[4px]">Y & O STORE</h1>
+            </div>
+            <div class="w-8"></div>
+        </nav>
+
+        <header class="py-12 text-center">
+            <h2 class="text-3xl font-black italic text-white mb-2 animate__animated animate__fadeInDown">OFFERS HUB 🔥</h2>
+            <p class="text-zinc-500 text-xs">أقوى عروض الشحن في مصر بين يديك</p>
+        </header>
+
+        <main class="container mx-auto pb-20">
+            <div id="offers-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-6">
+                </div>
+        </main>
+    </div>
+
+    <div id="admin-ui" class="admin-layout">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8 border-b border-zinc-800 pb-4">
+                <h1 class="font-gamer text-[#26ff00] text-xl tracking-tighter italic">ADMIN_DASHBOARD</h1>
+                <div class="flex gap-2">
+                    <button onclick="changePass()" class="bg-blue-600/20 text-blue-500 text-[10px] px-3 py-1 rounded border border-blue-600/40">تغيير الباسورد</button>
+                    <button onclick="location.reload()" class="bg-red-600 text-white text-[10px] px-3 py-1 rounded">خروج</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                <div class="stat-box">
+                    <span class="text-zinc-500 text-[10px] uppercase block mb-1">صافي أرباح تم استلامها</span>
+                    <span id="stat-profit" class="text-3xl font-gamer text-[#26ff00]">0.00</span>
+                    <small class="text-[10px] text-zinc-600 ml-1">EGP</small>
+                </div>
+                <div id="admin-add-btn" onclick="showAddForm()" class="stat-box border-dashed border-[#26ff00]/50 cursor-pointer hover:bg-[#26ff00]/5 flex items-center justify-center">
+                    <span class="text-[#26ff00] font-bold">+ إضافة عرض جديد</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div>
+                    <h3 class="font-bold text-sm mb-4 flex items-center gap-2">طلبات الواتساب الواردة <span class="bg-red-500 w-2 h-2 rounded-full animate-ping"></span></h3>
+                    <div id="orders-list" class="space-y-3 h-[500px] overflow-y-auto pr-2">
+                        </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-sm mb-4">العروض الحالية</h3>
+                    <div id="items-list" class="space-y-3">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات Firebase
+        const firebaseConfig = { databaseURL: "https://project-fe025bb5-b1cc-4b8f-93e-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentAdminPass = "01005718820";
+        db.ref('YO_STORE/settings/pass').on('value', s => { if(s.exists()) currentAdminPass = s.val(); });
+
+        // تسجيل دخول الأدمن
+        async function adminLogin() {
+            const { value: p } = await Swal.fire({
+                title: 'PASS KEY', input: 'password', 
+                background: '#0a0a0a', color: '#fff', confirmButtonColor: '#26ff00'
+            });
+            if(p === currentAdminPass) {
+                document.getElementById('store-ui').style.display = 'none';
+                document.getElementById('admin-ui').style.display = 'block';
+                loadAdmin();
+            } else if(p) { Swal.fire('Error', 'Wrong Password', 'error'); }
+        }
+
+        // تغيير الباسورد
+        async function changePass() {
+            const { value: np } = await Swal.fire({ title: 'كلمة سر جديدة', input: 'text', background: '#0a0a0a', color: '#fff' });
+            if(np) { db.ref('YO_STORE/settings/pass').set(np); Swal.fire('تم التغيير', '', 'success'); }
+        }
+
+        // إضافة عرض
+        async function showAddForm() {
+            const { value: f } = await Swal.fire({
+                title: 'تفاصيل العرض',
+                background: '#0a0a0a', color: '#fff',
+                html: `
+                    <input id="n" class="swal2-input" placeholder="اسم المنتج">
+                    <input id="c" type="number" class="swal2-input" placeholder="التكلفة عليك">
+                    <input id="s" type="number" class="swal2-input" placeholder="سعر البيع">
+                    <input id="p" class="swal2-input" placeholder="رقم واتسابك">
+                    <input type="file" id="i" class="swal2-input" accept="image/*">
+                `,
+                preConfirm: () => {
+                    return {
+                        n: document.getElementById('n').value,
+                        c: document.getElementById('c').value,
+                        s: document.getElementById('s').value,
+                        p: document.getElementById('p').value,
+                        i: document.getElementById('i').files[0]
+                    }
+                }
+            });
+
+            if(f && f.i) {
+                const r = new FileReader(); r.readAsDataURL(f.i);
+                r.onload = () => {
+                    db.ref('YO_STORE/items').push({ name:f.n, cost:f.c, sell:f.s, phone:f.p, img:r.result });
+                    Swal.fire('تم النشر', '', 'success');
+                };
+            }
+        }
+
+        // تحميل المتجر الرئيسي
+        db.ref('YO_STORE/items').on('value', snap => {
+            const grid = document.getElementById('offers-grid');
+            grid.innerHTML = "";
+            snap.forEach(child => {
+                const item = child.val();
+                grid.innerHTML += `
+                    <div class="offer-card animate__animated animate__zoomIn">
+                        <img src="${item.img}" class="w-full h-40 object-cover">
+                        <div class="p-4 text-center">
+                            <h3 class="font-bold text-md mb-2">${item.name}</h3>
+                            <div class="text-[#26ff00] font-gamer text-lg mb-4">${item.sell} <small class="text-[10px]">EGP</small></div>
+                            <button onclick="orderItem('${child.key}', '${item.name}', '${item.sell}', '${item.phone}')" class="w-full btn-neon text-xs">اطلب العرض 💬</button>
+                        </div>
+                    </div>`;
+            });
+        });
+
+        // تنفيذ طلب واتساب
+        function orderItem(key, name, sell, phone) {
+            const orderId = "YO-" + Math.floor(Math.random()*9999);
+            db.ref('YO_STORE/orders').push({ itemKey: key, name, sell, status: 'pending', id: orderId, time: Date.now() });
+            
+            const msg = `طلب شحن جديد: ${name} %0Aالسعر: ${sell} EGP %0Aكود الطلب: ${orderId} %0A--- %0Aبانتظار تأكيد الدفع للاستلام.`;
+            window.open(`https://wa.me/${phone}?text=${msg}`);
+            Swal.fire('تم إرسال الطلب', 'تابع مع الإدارة على الواتساب', 'success');
+        }
+
+        // لوحة الإدارة (تأكيد الأرباح)
+        function loadAdmin() {
+            db.ref('YO_STORE/orders').on('value', snap => {
+                const list = document.getElementById('orders-list');
+                const profitEl = document.getElementById('stat-profit');
+                list.innerHTML = "";
+                let totalProfit = 0;
+
+                snap.forEach(child => {
+                    const order = child.val();
+                    const oid = child.key;
+                    if(order.status === 'confirmed') totalProfit += parseFloat(order.calculatedProfit || 0);
+
+                    list.innerHTML += `
+                        <div class="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex justify-between items-center animate__animated animate__fadeIn">
+                            <div>
+                                <div class="text-xs font-bold text-white">${order.name}</div>
+                                <div class="text-[8px] text-zinc-500">ID: ${order.id} | ${new Date(order.time).toLocaleTimeString('ar-EG')}</div>
+                                <span class="${order.status==='pending'?'badge-pending':'badge-confirmed'} uppercase font-gamer font-bold mt-1 inline-block">${order.status}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                ${order.status === 'pending' ? `<button onclick="confirmOrder('${oid}', '${order.itemKey}')" class="bg-[#26ff00] text-black text-[9px] font-bold px-3 py-1 rounded">تأكيد الدفع ✅</button>` : ''}
+                                <button onclick="db.ref('YO_STORE/orders/${oid}').remove()" class="text-red-500 text-[18px]">×</button>
+                            </div>
+                        </div>`;
+                });
+                profitEl.innerText = totalProfit.toFixed(2);
+            });
+
+            db.ref('YO_STORE/items').on('value', snap => {
+                const ilist = document.getElementById('items-list');
+                ilist.innerHTML = "";
+                snap.forEach(c => {
+                    ilist.innerHTML += `
+                        <div class="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-zinc-800">
+                            <span class="text-[10px] text-zinc-400">${c.val().name}</span>
+                            <button onclick="db.ref('YO_STORE/items/${c.key}').remove()" class="text-red-600 text-[10px] font-bold">حذف المنتج</button>
+                        </div>`;
+                });
+            });
+        }
+
+        async function confirmOrder(orderId, itemKey) {
+            db.ref('YO_STORE/items/' + itemKey).once('value', s => {
+                if(s.exists()) {
+                    const item = s.val();
+                    const profit = parseFloat(item.sell) - parseFloat(item.cost);
+                    db.ref('YO_STORE/orders/' + orderId).update({ status: 'confirmed', calculatedProfit: profit });
+                    Swal.fire('تم التأكيد', 'تم إضافة الأرباح لإجمالي المحفظة', 'success');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
